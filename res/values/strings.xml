@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="hello">Hello World, CategoriesActivity!</string>
+    <string name="app_name">Niyo Radar!</string>
+    
+    <string
+        name="label">NIYO Tasks</string>
+
+    <!-- Permission label -->
+    <string
+        name="permlab_samplesyncadapterAuthPassword">access to passwords for NIYO Tasks accounts</string>
+    <!-- Permission description -->
+    <string
+        name="permdesc_samplesyncadapterAuthPassword">Allows applications direct access to the passwords for the
+        NIYO Tasks account(s) you have configured.</string>
+
+    <!-- Permission label -->
+    <string
+        name="permlab_samplesyncadapterAuth">view configured accounts</string>
+    <!-- Permission description -->
+    <string
+        name="permdesc_samplesyncadapterAuth">Allows applications to see the usernames (email addresses) of
+        the NIYO Tasks account(s) you have configured.</string>
+    <string
+        name="notification_login_error">Touch to sign into your NIYO Tasks account.</string>
+
+    <!-- Title string for Login activity-->
+    <string
+        name="ui_activity_title">Sign-in</string>
+    <!-- Message shown in progress dialog while app connects to the server -->
+    <string
+        name="ui_activity_authenticating">Authenticating\u2026</string>
+
+    <!-- AuthenticatorActivity -->
+    <skip />
+    <!-- Label above username EditText -->
+    <string
+        name="login_activity_username_label">Username</string>
+    <!-- Label above password EditText -->
+    <string
+        name="login_activity_password_label">Password</string>
+    <!-- Button to sign in after entering username and password -->
+    <string
+        name="login_activity_ok_button">Sign in</string>
+
+    <!-- Message shown in dialog if the username or password is invalid. -->
+    <string
+        name="login_activity_loginfail_text_both">The username or password isn\'t valid. A NIYO Tasks account is
+        required. Please try again. </string>
+    <!-- Message shown in dialog if the password is invalid -->
+    <string
+        name="login_activity_loginfail_text_pwonly">You entered the wrong password or your account has changed.
+        Please re-enter your password.</string>
+    <!-- Message shown in dialog to prompt the user for their password -->
+    <string
+        name="login_activity_loginfail_text_pwmissing">Type the password for this account.</string>
+    <!--
+        Message shown if the provided account doesn't support the current
+        activity.
+    -->
+    <string
+        name="login_activity_newaccount_text">Sign in to your NIYO Tasks account. </string>
+
+    <!-- Button that takes the user to the "sign in" screen -->
+    <string
+        name="sign_in_button_label">Sign in</string>
+    <!-- Button for going to the previous screen or step -->
+    <string
+        name="back_button_label">Back</string>
+    <!-- Button to cancel the current operation -->
+    <string
+        name="cancel_button_label">Cancel</string>
+    <string
+        name="profile_action">Sample profile</string>
+    <string
+        name="view_profile">View Profile</string>
+    <string name="findOrAdd">Find or add task</string>
+    <string name="add">Add</string>
+    <string name="crossedOff">Crossed off</string>
+    <string name="deleteAll">Delete all crossed-off items</string>
+    <string name="someText">someText</string>
+    <string name="findCategory">Find Category</string>
+    <string name="startNav">Start Navigating</string>
+    <string name="taskTitle">Task Title</string>
+    <string name="tapToUse">Tap to use this address</string>
+    <string name="addTask">Add Task</string>
+    <string name="showCategories">Categories</string>
+    <string name="mapBtn">Map</string>
+    <string name="boxTitle">Box Title</string>
+    <string name="btWelcome1">Would you like this connected device</string>
+    <string name="btWelcome2">Launch Niyo Go?</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    <string name="searchAdress">Search Address...</string>
+    <string name="done">Done</string>
+    <string name="mosheSne2">משה סנה 5, כפר סבא</string>
+    <string name="setBoxName">Set destination name...</string>
+    <string name="addDest">Add New Destination</string>
+    <string name="tapHere">Please tap here to add!</string>
+    <string name="chooseMapLabel">What app do you want to use?</string>
+    <string name="useGoogleMaps">Use Google Maps</string>
+    <string name="letSystemDecide">Let The System Decide</string>
+    <string name="neverAskAgain">Never Ask Again</string>
+    <string name="mapSelection">Select What Maps App To Use</string>
+    <string name="mapSelectionTitle">Map App Selection</string>
+    <string name="summary_debug_pref">Choose to see debug info</string>
+    <string name="title_debug_pref">Debug Mode</string>
+    <string name="noneMapSet">none</string>
+    <string name="niyoBtEnable">Enable Bluetooth Usage</string>
+    <string name="niyoBtEnableSummary">Check to enable or disable the app response to any blutooth communication</string>
+	<string name="title_clear_bt">Detach Bluetooth Devices</string>
+	<string name="summary_clear_bt">Clear the set of devices</string>
+	<string name="title_clear_bt_bl">Clear Bluetooth Blacklist</string>
+	<string name="summary_clear_bt_bl">Clear the set of devices you do not want to interact with</string>
+	<string name="launchApp">Launch a Nav App</string>
+	<string name="ok">OK</string>
+	<string name="send">Send</string>
+	<string name="clear">Clear</string>
+	<string name="resolve_friend">Edit friend</string>
+	<string name="signin">Sign In</string>
+	<string name="no_contacts">No Contacts Found</string>
+	<string name="menu_search">Search</string>
+	<string name="menu_add_contact">Add Contact</string>
+	<string name="imageview_description">Contact Thumbnail</string>
+	<string name="no_contact_selected">No Contact Selected</string>
+	<string name="no_address">No addresses found</string>
+	<string name="no_intent_found">No application found to handle this action</string>
+	<string name="address_button_description">View Address</string>
+	<string name="menu_edit_contact">Edit Contact</string>
+	<string name="alphabet">ABCDEFGHIJKLMNOPQRSTUVWXYZ</string>
+	<string name="contacts_list_search_results_title">Contacts List Search for \"%s\"</string>
+	<string name="search_match_other">Matches Other Field</string>
+
+</resources>
