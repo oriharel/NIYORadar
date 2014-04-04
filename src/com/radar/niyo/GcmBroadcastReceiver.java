@@ -3,6 +3,10 @@ package com.radar.niyo;
 import java.util.Calendar;
 import java.util.concurrent.TimeUnit;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import com.google.android.gms.gcm.GoogleCloudMessaging;
 
 import android.app.Activity;
@@ -179,7 +183,52 @@ public class GcmBroadcastReceiver extends BroadcastReceiver {
 			String payload = intent.getStringExtra("payload");
 			ClientLog.d(LOG_TAG, "got traffic with: "+payload);
 			
-			sendNotification("Traffic report is ready!", payload);
+			ServiceCaller caller = new ServiceCaller() {
+				
+				@Override
+				public void success(Object data) {
+					
+					ClientLog.d(LOG_TAG, "got answer from heroku with "+data);
+					
+					try {
+						JSONArray jsonData = new JSONArray((String)data);
+						
+						for(int i=0;i<jsonData.length();i++){
+							
+							JSONObject route = (JSONObject)jsonData.get(i);
+							String routeTime = (String)route.get("route-time");
+							String routeName = (String)route.get("route-name");
+							
+							String routeTimeClean = routeTime.replaceAll("\\D+","");
+							
+							int routeTimeInt = Integer.valueOf(routeTimeClean);
+							
+							if (routeTimeInt > 20) {
+								sendNotification(routeTimeInt+" mins on "+routeName, "dummy");
+							}
+							
+						}
+						
+					} catch (JSONException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					
+				}
+				
+				@Override
+				public void failure(Object data, String description) {
+					ClientLog.e(LOG_TAG, "got failure from heroku");
+					
+				}
+			};
+			
+			GenericHttpRequestTask trafficAlertTask = new GenericHttpRequestTask(caller);
+			
+			ClientLog.d(LOG_TAG, "going to call heroku now");
+			trafficAlertTask.execute("http://calm-fortress-7680.herokuapp.com/traffic");
+			
+			
 		}
         
     }
@@ -198,10 +247,11 @@ public class GcmBroadcastReceiver extends BroadcastReceiver {
         Notification.Builder mBuilder =
                 new Notification.Builder(ctx)
         .setSmallIcon(R.drawable.ic_launcher)
-        .setContentTitle("GCM Notification")
+        .setContentTitle("Heavy Traffic for Noa")
         .setStyle(new Notification.BigTextStyle()
         .bigText(msg))
-        .setContentText(msg);
+        .setContentText(msg)
+        .setAutoCancel(true);
 
         mBuilder.setContentIntent(contentIntent);
         mNotificationManager.notify(NOTIFICATION_ID, mBuilder.build());

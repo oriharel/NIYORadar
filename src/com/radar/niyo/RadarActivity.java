@@ -5,12 +5,15 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import org.json.JSONObject;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesClient;
@@ -28,6 +31,7 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.PolylineOptions;
 import com.radar.niyo.data.FriendsTableColumns;
 import com.radar.niyo.data.NiyoRadar;
 
@@ -39,6 +43,7 @@ import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.accounts.Account;
 import android.accounts.AccountManager;
+import android.app.ActionBar;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Fragment;
@@ -51,9 +56,12 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.Loader;
 import android.content.SharedPreferences;
+import android.content.res.Resources;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
+import android.support.v4.app.ActionBarDrawerToggle;
 import android.support.v4.widget.DrawerLayout;
 import android.text.TextUtils;
 import android.view.Menu;
@@ -88,8 +96,14 @@ GooglePlayServicesClient.OnConnectionFailedListener, OnMarkerClickListener, OnMa
 //	private AccountManager mAccountManager;
 	private LocationClient mLocationClient;
 	private LinkedHashMap<String, Marker> mMarkers;
+	private LinkedHashMap<String, List<PolylineOptions>> mRoutes;
 	private HashMap<String, Marker> mEmailToMarkers;
 	private Marker mFocusedMarker;
+	private String mNoaRouteKey = "noa";
+	private String mWorkRouteKey = "work";
+	LatLng homeLoc = new LatLng(Double.valueOf("32.188537"), Double.valueOf("34.896555"));
+	LatLng workLoc = new LatLng(Double.valueOf("32.130606"), Double.valueOf("34.893335"));
+	LatLng noaLoc = new LatLng(Double.valueOf("32.167393"), Double.valueOf("34.87512"));
 	
 	AtomicInteger msgId = new AtomicInteger();
 	RadarBroadcastReceiver mRadarRec;
@@ -106,7 +120,7 @@ GooglePlayServicesClient.OnConnectionFailedListener, OnMarkerClickListener, OnMa
 	@Override
 	protected void onCreate(Bundle savedInstanceState){
 		super.onCreate(savedInstanceState);
-		
+		ClientLog.d(LOG_TAG, "onCreate started");
 		requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
 		setContentView(R.layout.radar_layout);
 		mRadarRec = new RadarBroadcastReceiver(this);
@@ -118,7 +132,7 @@ GooglePlayServicesClient.OnConnectionFailedListener, OnMarkerClickListener, OnMa
 		map.setOnMapClickListener(this);
 		map.setOnInfoWindowClickListener(this);
 		findViewById(R.id.arrowsContainer).setVisibility(View.GONE);
-		
+		mRoutes = new LinkedHashMap<String, List<PolylineOptions>>();
 //		gcm = GoogleCloudMessaging.getInstance(this);
 		mLocationClient = new LocationClient(this, this, this);
 		mLocationClient.connect();
@@ -162,10 +176,217 @@ GooglePlayServicesClient.OnConnectionFailedListener, OnMarkerClickListener, OnMa
 		
 		initDrawer();
 		
+		initTraffic();
 		
+		if (!TextUtils.isEmpty(getIntent().getStringExtra(GcmBroadcastReceiver.TRAFFIC_REPORT))) {
+			map.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
+				
+				@Override
+				public void onMapLoaded() {
+					showTraffic(map, mNoaRouteKey, noaLoc);
+					
+				}
+			});
+			
+		}
 		
 	}
 	
+	private void initTraffic() {
+		
+		
+		String workUrl = getDirectionsUrl(homeLoc, workLoc);
+		String noaUrl = getDirectionsUrl(homeLoc, noaLoc);
+		
+		ServiceCaller workCaller = new ServiceCaller() {
+			
+			@Override
+			public void success(Object data) {
+				ParserTask parserTask = new ParserTask(mWorkRouteKey);
+				
+				// Invokes the thread for parsing the JSON data
+				parserTask.execute((String)data);
+				
+			}
+			
+			@Override
+			public void failure(Object data, String description) {
+				// TODO Auto-generated method stub
+				
+			}
+		};
+		
+		
+		ServiceCaller noaCaller = new ServiceCaller() {
+			
+			@Override
+			public void success(Object data) {
+				ParserTask parserTask = new ParserTask(mNoaRouteKey);
+				 
+	            // Invokes the thread for parsing the JSON data
+	            parserTask.execute((String)data);
+				
+			}
+			
+			@Override
+			public void failure(Object data, String description) {
+				// TODO Auto-generated method stub
+				
+			}
+		};
+		
+		GenericHttpRequestTask workDownloadTask = new GenericHttpRequestTask(workCaller);
+		ClientLog.d(LOG_TAG, "getting directions with url: "+workUrl);
+		workDownloadTask.execute(workUrl);
+		
+		GenericHttpRequestTask noaDownloadTask = new GenericHttpRequestTask(noaCaller);
+		ClientLog.d(LOG_TAG, "getting directions with url: "+noaUrl);
+		noaDownloadTask.execute(noaUrl);
+		
+	}
+	
+	private class ParserTask extends AsyncTask<String, Integer, List<List<HashMap<String,String>>> >{
+		
+		private String mRouteKey;
+		
+		public ParserTask(String routeKey) {
+			mRouteKey = routeKey; 
+		}
+		 
+        // Parsing the data in non-ui thread
+        @Override
+        protected List<List<HashMap<String, String>>> doInBackground(String... jsonData) {
+ 
+            JSONObject jObject;
+            List<List<HashMap<String, String>>> routes = null;
+ 
+            try{
+                jObject = new JSONObject(jsonData[0]);
+                DirectionsJSONParser parser = new DirectionsJSONParser();
+ 
+                // Starts parsing data
+                routes = parser.parse(jObject);
+            }catch(Exception e){
+                e.printStackTrace();
+            }
+            return routes;
+        }
+ 
+        // Executes in UI thread, after the parsing process
+        @Override
+        protected void onPostExecute(List<List<HashMap<String, String>>> result) {
+            ArrayList<LatLng> points = null;
+            PolylineOptions lineOptions = null;
+            MarkerOptions markerOptions = new MarkerOptions();
+ 
+            // Traversing through all the routes
+            for(int i=0;i<result.size();i++){
+                points = new ArrayList<LatLng>();
+                lineOptions = new PolylineOptions();
+ 
+                // Fetching i-th route
+                List<HashMap<String, String>> path = result.get(i);
+ 
+                // Fetching all the points in i-th route
+                for(int j=0;j<path.size();j++){
+                    HashMap<String,String> point = path.get(j);
+ 
+                    double lat = Double.parseDouble(point.get("lat"));
+                    double lng = Double.parseDouble(point.get("lng"));
+                    LatLng position = new LatLng(lat, lng);
+ 
+                    points.add(position);
+                }
+ 
+                // Adding all the points in the route to LineOptions
+                lineOptions.addAll(points);
+                lineOptions.width(10);
+                lineOptions.color(Color.parseColor("#8C999999"));
+                
+                List<PolylineOptions> subRoutes = mRoutes.get(mRouteKey);
+                
+                if (subRoutes == null) {
+                	subRoutes = new ArrayList<PolylineOptions>();
+                	mRoutes.put(mRouteKey, subRoutes);
+                }
+                subRoutes.add(lineOptions);
+                
+                
+                
+                if (getTitle().toString().toLowerCase().indexOf("traffic") > -1) {
+                	
+                	final GoogleMap map = ((MapFragment)getFragmentManager().findFragmentById(R.id.map)).getMap();
+                    map.addPolyline(lineOptions);
+                }
+                
+                
+            }
+ 
+            // Drawing polyline in the Google Map for the i-th route
+            
+            
+            
+            
+        }
+    }
+	
+	private String getDirectionsUrl(LatLng origin,LatLng dest){
+		 
+        // Origin of route
+        String str_origin = "origin="+origin.latitude+","+origin.longitude;
+ 
+        // Destination of route
+        String str_dest = "destination="+dest.latitude+","+dest.longitude;
+ 
+        // Sensor enabled
+        String sensor = "sensor=false";
+        
+        String alternatives = "alternatives=true";
+ 
+        // Building the parameters to the web service
+        String parameters = str_origin+"&"+str_dest+"&"+sensor+"&"+alternatives;
+ 
+        // Output format
+        String output = "json";
+ 
+        // Building the url to the web service
+        String url = "https://maps.googleapis.com/maps/api/directions/"+output+"?"+parameters;
+ 
+        return url;
+    }
+	
+	public void showTraffic(GoogleMap map, String routeKey, LatLng loc) {
+		
+		if (mMarkers != null) {
+			for (Marker marker : mMarkers.values()) {
+				marker.setVisible(false);
+			}
+		}
+		
+		setTitle(mRadayNavOptions[1]);
+		
+		
+//		for (String routeKey : mRoutes.keySet()) {
+			if (mRoutes.get(mNoaRouteKey) != null) {
+				for (PolylineOptions polylineOptions : mRoutes.get(routeKey)) {
+					map.addPolyline(polylineOptions);
+					polylineOptions.visible(true);
+				}
+				
+			}
+//		}
+		
+		LatLngBounds.Builder boundsBuilder = LatLngBounds.builder();
+		
+		
+		
+		boundsBuilder.include(homeLoc);
+		boundsBuilder.include(loc);
+		
+		CameraUpdate update = CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 200);
+		map.animateCamera(update);
+	}
+
 	private class DrawerItemClickListener implements ListView.OnItemClickListener {
 		
 		@Override
@@ -175,18 +396,48 @@ GooglePlayServicesClient.OnConnectionFailedListener, OnMarkerClickListener, OnMa
 		
 		/** Swaps fragments in the main content view */
 		private void selectItem(int position) {
-		    // Create a new fragment and specify the planet to show based on position
-		    Fragment fragment = new TrafficFragment();
-
-		    // Insert the fragment by replacing any existing fragment
-		    FragmentManager fragmentManager = getFragmentManager();
-		    fragmentManager.beginTransaction()
-		                   .replace(R.id.content_frame, fragment)
-		                   .commit();
-
+			
+			final int home = 0;
+			final int noaTraffic = 1;
+			final int workTraffic = 2;
+			final GoogleMap map = ((MapFragment)getFragmentManager().findFragmentById(R.id.map)).getMap();
+			
+			switch(position) {
+				case home:
+				{
+					for (Marker marker : mMarkers.values()) {
+						marker.setVisible(true);
+					}
+					Resources appR = getResources();
+					CharSequence txt = appR.getText(appR.getIdentifier("app_name", "string", getPackageName()));
+					setTitle(txt);
+					
+					for (String routeKey : mRoutes.keySet()) {
+						if (mRoutes.get(routeKey) != null) {
+							for (PolylineOptions polylineOptions : mRoutes.get(routeKey)) {
+								polylineOptions.visible(false);
+							}
+							
+						}
+					}
+					
+					break;
+				}
+				case noaTraffic:
+				{
+					showTraffic(map, mNoaRouteKey, noaLoc);
+					break;
+				}
+				case workTraffic:
+				{
+					showTraffic(map, mWorkRouteKey, workLoc);
+					break;
+				}
+			}
+			
 		    // Highlight the selected item, update the title, and close the drawer
 		    mDrawerList.setItemChecked(position, true);
-		    setTitle(mRadayNavOptions[position]);
+		    
 		    mDrawerLayout.closeDrawer(mDrawerList);
 		}
 
@@ -197,15 +448,49 @@ GooglePlayServicesClient.OnConnectionFailedListener, OnMarkerClickListener, OnMa
 
 	}
 	
+	
+	
 	private void initDrawer() {
 		
-		mRadayNavOptions = getResources().getStringArray(R.array.radar_nav_options);
+//		mRadayNavOptions = getResources().getStringArray(R.array.radar_nav_options);
+		ActionBar actionBar = getActionBar();
+	    actionBar.setDisplayHomeAsUpEnabled(true);
+	    actionBar.setHomeButtonEnabled(true);
+	    
+		mRadayNavOptions = new String[]{"Home", "Noa Traffic", "Work Traffic"};
         mDrawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
         mDrawerList = (ListView) findViewById(R.id.left_drawer);
 
         // Set the adapter for the list view
         mDrawerList.setAdapter(new ArrayAdapter<String>(this,
                 R.layout.drawer_list_item, mRadayNavOptions));
+        
+        final ActionBarDrawerToggle mDrawerToggle = new ActionBarDrawerToggle(
+                this,                             /* host Activity */
+                mDrawerLayout,                    /* DrawerLayout object */
+                R.drawable.ic_navigation_drawer,             /* nav drawer image to replace 'Up' caret */
+                R.string.navigation_drawer_open,  /* "open drawer" description for accessibility */
+                R.string.navigation_drawer_close  /* "close drawer" description for accessibility */
+        ) {
+            @Override
+            public void onDrawerClosed(View drawerView) {
+                invalidateOptionsMenu(); // calls onPrepareOptionsMenu()
+            }
+
+            @Override
+            public void onDrawerOpened(View drawerView) {
+                invalidateOptionsMenu(); // calls onPrepareOptionsMenu()
+            }
+        };
+        
+        mDrawerLayout.post(new Runnable() {
+            @Override
+            public void run() {
+                mDrawerToggle.syncState();
+            }
+        });
+
+        mDrawerLayout.setDrawerListener(mDrawerToggle);
         // Set the list's click listener
         mDrawerList.setOnItemClickListener(new DrawerItemClickListener());
 		
@@ -302,11 +587,6 @@ GooglePlayServicesClient.OnConnectionFailedListener, OnMarkerClickListener, OnMa
 		debugView.setText("");
 		registerReceiver(mRadarRec, new IntentFilter("com.niyo.updateFriend"));
 		requestLocationsUpdate();
-		
-		Intent intent = getIntent();
-		if (!TextUtils.isEmpty(intent.getStringExtra(GcmBroadcastReceiver.TRAFFIC_REPORT))) {
-			Toast.makeText(this, "Has traffic report", Toast.LENGTH_LONG).show();
-		}
 	}
 	
 	@Override
@@ -536,7 +816,9 @@ GooglePlayServicesClient.OnConnectionFailedListener, OnMarkerClickListener, OnMa
 	
 	protected void setNiyoMarker(ImageView image, String email, Double lat, Double lon, String msg, Boolean shouldAnimate) {
 		
-		GoogleMap map = ((MapFragment)getFragmentManager().findFragmentById(R.id.map)).getMap();
+		MapFragment mapFragment = ((MapFragment)getFragmentManager().findFragmentById(R.id.map));
+		if (mapFragment == null) return;
+		GoogleMap map = mapFragment.getMap();
 		
 		
 		MarkerOptions options = new MarkerOptions();
@@ -544,7 +826,7 @@ GooglePlayServicesClient.OnConnectionFailedListener, OnMarkerClickListener, OnMa
 		options.position(position);
 		options.title(email);
 		options.snippet(msg);
-		LatLngBounds.Builder boundsBuilder = LatLngBounds.builder();
+//		LatLngBounds.Builder boundsBuilder = LatLngBounds.builder();
 		
 		
 		if (mMarkers == null) {
@@ -558,14 +840,14 @@ GooglePlayServicesClient.OnConnectionFailedListener, OnMarkerClickListener, OnMa
 		
 		
 		
-		for (Marker marker : mMarkers.values()) {
-			ClientLog.d(LOG_TAG, marker.getTitle()+" position: "+marker.getPosition());
-			boundsBuilder.include(marker.getPosition());
-		}
+//		for (Marker marker : mMarkers.values()) {
+//			ClientLog.d(LOG_TAG, marker.getTitle()+" position: "+marker.getPosition());
+//			boundsBuilder.include(marker.getPosition());
+//		}
 		
-		Location location = mLocationClient.getLastLocation();
-		LatLng myPosition = new LatLng(location.getLatitude(), location.getLongitude());
-		boundsBuilder.include(myPosition);
+//		Location location = mLocationClient.getLastLocation();
+//		LatLng myPosition = new LatLng(location.getLatitude(), location.getLongitude());
+//		boundsBuilder.include(myPosition);
 		
 		
 		

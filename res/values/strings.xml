@@ -131,5 +131,7 @@
 	<string name="alphabet">ABCDEFGHIJKLMNOPQRSTUVWXYZ</string>
 	<string name="contacts_list_search_results_title">Contacts List Search for \"%s\"</string>
 	<string name="search_match_other">Matches Other Field</string>
+	<string name="navigation_drawer_open">Open Drawer</string>
+	<string name="navigation_drawer_close">Close Drawer</string>
 
 </resources>
