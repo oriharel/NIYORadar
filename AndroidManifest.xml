@@ -87,7 +87,7 @@
         <!-- <meta-data android:name="com.google.android.maps.v2.API_KEY" android:value="AIzaSyBQetBM4MDq25YXBRZp1R0j3EMXUxDokdg"/> -->
         
         <!-- Debug -->
-        <meta-data android:name="com.google.android.maps.v2.API_KEY" android:value="AIzaSyBCZqt59WXCsaPBbh_xTRvtggNbfTzUjqE"/>
+        <meta-data android:name="com.google.android.maps.v2.API_KEY" android:value="AIzaSyCqYFtlSw4EWpcwK9nNonIZhTfOGVoseow"/>
         <meta-data android:name="com.google.android.gms.version" android:value="@integer/google_play_services_version" />
     </application>
 

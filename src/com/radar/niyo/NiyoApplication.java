@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.sql.Timestamp;
 
 import com.google.android.gms.gcm.GoogleCloudMessaging;
+import com.radar.niyo.data.Place;
 
 import android.app.Application;
 import android.content.Context;
@@ -27,8 +28,6 @@ public class NiyoApplication extends Application {
 
 	private static final String LOG_TAG = NiyoApplication.class.getSimpleName();
 	private static Boolean s_logEnabled = true;
-//	private static Boolean s_logEnabled = false;
-//	private JSONArray mFoursqaureVenues;
 	GoogleCloudMessaging gcm;
 	
 	public static final String PROPERTY_REG_ID = "registration_id";
@@ -50,6 +49,7 @@ public class NiyoApplication extends Application {
 		super.onCreate();
 		
 		mRegid = getRegistrationId();
+		ClientLog.d(LOG_TAG, "mRegId is: "+mRegid);
         
         if (mRegid.length() == 0) {
             registerBackground();
@@ -58,6 +58,20 @@ public class NiyoApplication extends Application {
 //		fetchData();
 //		fetchFoursquareVenues();
 //		setupProximityAlerts();
+        createPlaces();
+	}
+	
+	private void createPlaces() {
+		
+		SettingsManager.setString(this, Place.HOME_LAT, "32.188912");
+		SettingsManager.setString(this, Place.HOME_LON, "34.896700");
+		
+		SettingsManager.setString(this, Place.WORK_LAT, "32.130576");
+		SettingsManager.setString(this, Place.WORK_LON, "34.893403");
+		
+		SettingsManager.setString(this, Place.FERBER_LAT, "32.187530");
+		SettingsManager.setString(this, Place.FERBER_LON, "34.927225");
+		
 	}
 	
 	private String getRegistrationId() {
@@ -70,7 +84,9 @@ public class NiyoApplication extends Application {
 	    // check if app was updated; if so, it must clear registration id to
 	    // avoid a race condition if GCM sends a message
 	    int registeredVersion = SettingsManager.getInt(this, PROPERTY_APP_VERSION, Integer.MIN_VALUE);
+	    
 	    int currentVersion = getAppVersion(this);
+	    ClientLog.d(LOG_TAG, "getRegistrationId registeredVersion: "+registeredVersion+" currentVersion: "+currentVersion);
 	    if (registeredVersion != currentVersion || isRegistrationExpired()) {
 	        Log.v(LOG_TAG, "App version changed or registration expired.");
 	        return "";
@@ -148,73 +164,5 @@ public class NiyoApplication extends Application {
 	        }
 	    }.execute(null, null, null);
 	}
-	
-//	private void setupProximityAlerts() {
-//		
-//		//for rebuild
-//		IntentFilter filter = new IntentFilter(ProximityIntentReciever.TASK_PROXIMITY_ALERT);
-//		ProximityIntentReciever reciever = new ProximityIntentReciever();
-//		registerReceiver(reciever, filter);
-//		Utils.setupProximityAlerts(this);
-//		
-//	}
-
-//	private void fetchFoursquareVenues() {
-//
-//		ClientLog.d(LOG_TAG, "reading the categories");
-//		try {        
-//			BufferedReader in = null;
-//			in = new BufferedReader(new InputStreamReader(getAssets().open("categories.json")));
-//			String line;
-//			StringBuilder sb = new StringBuilder();
-//			
-//			while((line =in.readLine()) != null){
-//				sb.append(line);
-//			}
-//			
-//			in.close();
-//			//create a json object
-//			JSONObject json = new JSONObject(sb.toString());
-//
-//			//loop over the items array and look for pid
-//			JSONArray categories = json.getJSONObject("response").getJSONArray("categories");
-//			setFoursqaureVenues(categories);
-//			
-//			//TODO - to remove. expensinve loop
-//			for (int i = 0; i < getFoursqaureVenues().length(); i++){
-//				ClientLog.d(LOG_TAG, "category: "+getFoursqaureVenues().getJSONObject(i).getString("name"));
-//			}
-//			
-//		} catch (Exception e) {
-//			ClientLog.e(LOG_TAG, "Error!", e);
-//		}
-//
-//
-//	}
-
-//	public void fetchData(){
-//		ArrayList<String> urls = new ArrayList<String>();
-//		try {
-//			urls.add("http://niyoapi.appspot.com/categories");
-//			urls.add("http://niyoapi.appspot.com/tasks");
-//			urls.add("http://niyoapi.appspot.com/getFlatTasks");
-//			urls.add("https://api.foursquare.com/v2/venues/categories?oauth_token=3MU3QXE3H3KHT33DGG4NMR0KD221DVFMOFQQQ3VOIUQ5DKJY&v=20120424");
-//			
-//			Intent intent = new Intent(this, JsonFetchIntentService.class);
-//			intent.putStringArrayListExtra(JsonFetchIntentService.URLS_EXTRA, urls);
-//			startService(intent);
-//			
-//		} catch (Exception e) {
-//			ClientLog.e(LOG_TAG, "Error!", e);
-//		}
-//	}
-
-//	public JSONArray getFoursqaureVenues() {
-//		return mFoursqaureVenues;
-//	}
-
-//	public void setFoursqaureVenues(JSONArray foursqaureVenues) {
-//		mFoursqaureVenues = foursqaureVenues;
-//	}
 
 }

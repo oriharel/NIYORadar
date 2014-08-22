@@ -176,9 +176,9 @@ GooglePlayServicesClient.OnConnectionFailedListener, OnMarkerClickListener, OnMa
 		
 		initDrawer();
 		
-		initTraffic();
+//		initTraffic();
 		
-		if (!TextUtils.isEmpty(getIntent().getStringExtra(GcmBroadcastReceiver.TRAFFIC_REPORT))) {
+		if (!TextUtils.isEmpty(getIntent().getStringExtra(WazeParserServiceCaller.TRAFFIC_REPORT))) {
 			map.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
 				
 				@Override
@@ -192,168 +192,168 @@ GooglePlayServicesClient.OnConnectionFailedListener, OnMarkerClickListener, OnMa
 		
 	}
 	
-	private void initTraffic() {
-		
-		
-		String workUrl = getDirectionsUrl(homeLoc, workLoc);
-		String noaUrl = getDirectionsUrl(homeLoc, noaLoc);
-		
-		ServiceCaller workCaller = new ServiceCaller() {
-			
-			@Override
-			public void success(Object data) {
-				ParserTask parserTask = new ParserTask(mWorkRouteKey);
-				
-				// Invokes the thread for parsing the JSON data
-				parserTask.execute((String)data);
-				
-			}
-			
-			@Override
-			public void failure(Object data, String description) {
-				// TODO Auto-generated method stub
-				
-			}
-		};
-		
-		
-		ServiceCaller noaCaller = new ServiceCaller() {
-			
-			@Override
-			public void success(Object data) {
-				ParserTask parserTask = new ParserTask(mNoaRouteKey);
-				 
-	            // Invokes the thread for parsing the JSON data
-	            parserTask.execute((String)data);
-				
-			}
-			
-			@Override
-			public void failure(Object data, String description) {
-				// TODO Auto-generated method stub
-				
-			}
-		};
-		
-		GenericHttpRequestTask workDownloadTask = new GenericHttpRequestTask(workCaller);
-		ClientLog.d(LOG_TAG, "getting directions with url: "+workUrl);
-		workDownloadTask.execute(workUrl);
-		
-		GenericHttpRequestTask noaDownloadTask = new GenericHttpRequestTask(noaCaller);
-		ClientLog.d(LOG_TAG, "getting directions with url: "+noaUrl);
-		noaDownloadTask.execute(noaUrl);
-		
-	}
+//	private void initTraffic() {
+//		
+//		
+//		String workUrl = getDirectionsUrl(homeLoc, workLoc);
+//		String noaUrl = getDirectionsUrl(homeLoc, noaLoc);
+//		
+//		ServiceCaller workCaller = new ServiceCaller() {
+//			
+//			@Override
+//			public void success(Object data) {
+//				ParserTask parserTask = new ParserTask(mWorkRouteKey);
+//				
+//				// Invokes the thread for parsing the JSON data
+//				parserTask.execute((String)data);
+//				
+//			}
+//			
+//			@Override
+//			public void failure(Object data, String description) {
+//				// TODO Auto-generated method stub
+//				
+//			}
+//		};
+//		
+//		
+//		ServiceCaller noaCaller = new ServiceCaller() {
+//			
+//			@Override
+//			public void success(Object data) {
+//				ParserTask parserTask = new ParserTask(mNoaRouteKey);
+//				 
+//	            // Invokes the thread for parsing the JSON data
+//	            parserTask.execute((String)data);
+//				
+//			}
+//			
+//			@Override
+//			public void failure(Object data, String description) {
+//				// TODO Auto-generated method stub
+//				
+//			}
+//		};
+//		
+//		GenericHttpRequestTask workDownloadTask = new GenericHttpRequestTask(workCaller);
+//		ClientLog.d(LOG_TAG, "getting directions with url: "+workUrl);
+//		workDownloadTask.execute(workUrl);
+//		
+//		GenericHttpRequestTask noaDownloadTask = new GenericHttpRequestTask(noaCaller);
+//		ClientLog.d(LOG_TAG, "getting directions with url: "+noaUrl);
+//		noaDownloadTask.execute(noaUrl);
+//		
+//	}
 	
-	private class ParserTask extends AsyncTask<String, Integer, List<List<HashMap<String,String>>> >{
-		
-		private String mRouteKey;
-		
-		public ParserTask(String routeKey) {
-			mRouteKey = routeKey; 
-		}
-		 
-        // Parsing the data in non-ui thread
-        @Override
-        protected List<List<HashMap<String, String>>> doInBackground(String... jsonData) {
- 
-            JSONObject jObject;
-            List<List<HashMap<String, String>>> routes = null;
- 
-            try{
-                jObject = new JSONObject(jsonData[0]);
-                DirectionsJSONParser parser = new DirectionsJSONParser();
- 
-                // Starts parsing data
-                routes = parser.parse(jObject);
-            }catch(Exception e){
-                e.printStackTrace();
-            }
-            return routes;
-        }
- 
-        // Executes in UI thread, after the parsing process
-        @Override
-        protected void onPostExecute(List<List<HashMap<String, String>>> result) {
-            ArrayList<LatLng> points = null;
-            PolylineOptions lineOptions = null;
-            MarkerOptions markerOptions = new MarkerOptions();
- 
-            // Traversing through all the routes
-            for(int i=0;i<result.size();i++){
-                points = new ArrayList<LatLng>();
-                lineOptions = new PolylineOptions();
- 
-                // Fetching i-th route
-                List<HashMap<String, String>> path = result.get(i);
- 
-                // Fetching all the points in i-th route
-                for(int j=0;j<path.size();j++){
-                    HashMap<String,String> point = path.get(j);
- 
-                    double lat = Double.parseDouble(point.get("lat"));
-                    double lng = Double.parseDouble(point.get("lng"));
-                    LatLng position = new LatLng(lat, lng);
- 
-                    points.add(position);
-                }
- 
-                // Adding all the points in the route to LineOptions
-                lineOptions.addAll(points);
-                lineOptions.width(10);
-                lineOptions.color(Color.parseColor("#8C999999"));
-                
-                List<PolylineOptions> subRoutes = mRoutes.get(mRouteKey);
-                
-                if (subRoutes == null) {
-                	subRoutes = new ArrayList<PolylineOptions>();
-                	mRoutes.put(mRouteKey, subRoutes);
-                }
-                subRoutes.add(lineOptions);
-                
-                
-                
-                if (getTitle().toString().toLowerCase().indexOf("traffic") > -1) {
-                	
-                	final GoogleMap map = ((MapFragment)getFragmentManager().findFragmentById(R.id.map)).getMap();
-                    map.addPolyline(lineOptions);
-                }
-                
-                
-            }
- 
-            // Drawing polyline in the Google Map for the i-th route
-            
-            
-            
-            
-        }
-    }
+//	private class ParserTask extends AsyncTask<String, Integer, List<List<HashMap<String,String>>> >{
+//		
+//		private String mRouteKey;
+//		
+//		public ParserTask(String routeKey) {
+//			mRouteKey = routeKey; 
+//		}
+//		 
+//        // Parsing the data in non-ui thread
+//        @Override
+//        protected List<List<HashMap<String, String>>> doInBackground(String... jsonData) {
+// 
+//            JSONObject jObject;
+//            List<List<HashMap<String, String>>> routes = null;
+// 
+//            try{
+//                jObject = new JSONObject(jsonData[0]);
+//                DirectionsJSONParser parser = new DirectionsJSONParser();
+// 
+//                // Starts parsing data
+//                routes = parser.parse(jObject);
+//            }catch(Exception e){
+//                e.printStackTrace();
+//            }
+//            return routes;
+//        }
+// 
+//        // Executes in UI thread, after the parsing process
+//        @Override
+//        protected void onPostExecute(List<List<HashMap<String, String>>> result) {
+//            ArrayList<LatLng> points = null;
+//            PolylineOptions lineOptions = null;
+//            MarkerOptions markerOptions = new MarkerOptions();
+// 
+//            // Traversing through all the routes
+//            for(int i=0;i<result.size();i++){
+//                points = new ArrayList<LatLng>();
+//                lineOptions = new PolylineOptions();
+// 
+//                // Fetching i-th route
+//                List<HashMap<String, String>> path = result.get(i);
+// 
+//                // Fetching all the points in i-th route
+//                for(int j=0;j<path.size();j++){
+//                    HashMap<String,String> point = path.get(j);
+// 
+//                    double lat = Double.parseDouble(point.get("lat"));
+//                    double lng = Double.parseDouble(point.get("lng"));
+//                    LatLng position = new LatLng(lat, lng);
+// 
+//                    points.add(position);
+//                }
+// 
+//                // Adding all the points in the route to LineOptions
+//                lineOptions.addAll(points);
+//                lineOptions.width(10);
+//                lineOptions.color(Color.parseColor("#8C999999"));
+//                
+//                List<PolylineOptions> subRoutes = mRoutes.get(mRouteKey);
+//                
+//                if (subRoutes == null) {
+//                	subRoutes = new ArrayList<PolylineOptions>();
+//                	mRoutes.put(mRouteKey, subRoutes);
+//                }
+//                subRoutes.add(lineOptions);
+//                
+//                
+//                
+//                if (getTitle().toString().toLowerCase().indexOf("traffic") > -1) {
+//                	
+//                	final GoogleMap map = ((MapFragment)getFragmentManager().findFragmentById(R.id.map)).getMap();
+//                    map.addPolyline(lineOptions);
+//                }
+//                
+//                
+//            }
+// 
+//            // Drawing polyline in the Google Map for the i-th route
+//            
+//            
+//            
+//            
+//        }
+//    }
 	
-	private String getDirectionsUrl(LatLng origin,LatLng dest){
-		 
-        // Origin of route
-        String str_origin = "origin="+origin.latitude+","+origin.longitude;
- 
-        // Destination of route
-        String str_dest = "destination="+dest.latitude+","+dest.longitude;
- 
-        // Sensor enabled
-        String sensor = "sensor=false";
-        
-        String alternatives = "alternatives=true";
- 
-        // Building the parameters to the web service
-        String parameters = str_origin+"&"+str_dest+"&"+sensor+"&"+alternatives;
- 
-        // Output format
-        String output = "json";
- 
-        // Building the url to the web service
-        String url = "https://maps.googleapis.com/maps/api/directions/"+output+"?"+parameters;
- 
-        return url;
-    }
+//	private String getDirectionsUrl(LatLng origin,LatLng dest){
+//		 
+//        // Origin of route
+//        String str_origin = "origin="+origin.latitude+","+origin.longitude;
+// 
+//        // Destination of route
+//        String str_dest = "destination="+dest.latitude+","+dest.longitude;
+// 
+//        // Sensor enabled
+//        String sensor = "sensor=false";
+//        
+//        String alternatives = "alternatives=true";
+// 
+//        // Building the parameters to the web service
+//        String parameters = str_origin+"&"+str_dest+"&"+sensor+"&"+alternatives;
+// 
+//        // Output format
+//        String output = "json";
+// 
+//        // Building the url to the web service
+//        String url = "https://maps.googleapis.com/maps/api/directions/"+output+"?"+parameters;
+// 
+//        return url;
+//    }
 	
 	public void showTraffic(GoogleMap map, String routeKey, LatLng loc) {
 		

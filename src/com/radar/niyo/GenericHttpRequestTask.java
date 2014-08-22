@@ -68,7 +68,7 @@ public class GenericHttpRequestTask extends AsyncTask<String, Void, Integer> {
         	 mCaller.failure(result, mMsg);
          }
          else {
-        	 ClientLog.d(LOG_TAG, "Http request succeeded with "+mMsg);
+//        	 ClientLog.d(LOG_TAG, "Http request succeeded with "+mMsg);
         	 mCaller.success(mMsg);
          }
 	}

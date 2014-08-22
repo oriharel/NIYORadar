@@ -1,5 +1,6 @@
 package com.radar.niyo;
 
+import java.security.InvalidParameterException;
 import java.util.Calendar;
 import java.util.concurrent.TimeUnit;
 
@@ -8,6 +9,9 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.google.android.gms.gcm.GoogleCloudMessaging;
+import com.radar.niyo.data.AutoEvent;
+import com.radar.niyo.data.CalendarHelper;
+import com.radar.niyo.data.Place;
 
 import android.app.Activity;
 import android.app.Notification;
@@ -23,9 +27,8 @@ import android.widget.Toast;
 public class GcmBroadcastReceiver extends BroadcastReceiver {
 
 	static final String LOG_TAG = GcmBroadcastReceiver.class.getSimpleName();
-    public static final int NOTIFICATION_ID = 1;
-	public static final String TRAFFIC_REPORT = "traffic_report";
-    private NotificationManager mNotificationManager;
+    
+    
     NotificationCompat.Builder builder;
     Context ctx;
     @Override
@@ -179,82 +182,63 @@ public class GcmBroadcastReceiver extends BroadcastReceiver {
 			context.sendBroadcast(updateIntent);
 		}
 		
-		else if (gcmType.equals("traffic")) {
+		else if (gcmType.toLowerCase().indexOf("traffic") > -1) {
 			String payload = intent.getStringExtra("payload");
 			ClientLog.d(LOG_TAG, "got traffic with: "+payload);
 			
-			ServiceCaller caller = new ServiceCaller() {
+			
+			
+//			ClientLog.d(LOG_TAG, "going to call waze now");
+			String homeLat = SettingsManager.getString(context, Place.HOME_LAT);
+			String homeLon = SettingsManager.getString(context, Place.HOME_LON);
+			
+			String workLat = SettingsManager.getString(context, Place.WORK_LAT);
+			String workLon = SettingsManager.getString(context, Place.WORK_LON);
+			
+			String fromLat = null;
+			String fromLon = null;
+			String toLat = null;
+			String toLon = null;
+			
+			if (gcmType.equals("morningTrafficToWork")) {
+				fromLat = homeLat;
+				fromLon = homeLon;
+				toLat = workLat;
+				toLon = workLon;
+			}
+			else if (gcmType.equals("eveningTrafficHome")) {
+				fromLat = workLat;
+				fromLon = workLon;
+				toLat = homeLat;
+				toLon = homeLon;
+			}
+			else if (gcmType.equals("nextEventTraffic")){
+				Intent serviceIntent = new Intent(context, LocationUpdaterIntentService.class);
+				serviceIntent.putExtra(LocationUpdaterIntentService.NEXT_EVENT_MODE, true);
+				context.startService(serviceIntent);
+			}
+			
+			if (fromLat != null &&
+				fromLon != null &&
+				toLat != null &&
+				toLon != null) {
 				
-				@Override
-				public void success(Object data) {
-					
-					ClientLog.d(LOG_TAG, "got answer from heroku with "+data);
-					
-					try {
-						JSONArray jsonData = new JSONArray((String)data);
-						
-						for(int i=0;i<jsonData.length();i++){
-							
-							JSONObject route = (JSONObject)jsonData.get(i);
-							String routeTime = (String)route.get("route-time");
-							String routeName = (String)route.get("route-name");
-							
-							String routeTimeClean = routeTime.replaceAll("\\D+","");
-							
-							int routeTimeInt = Integer.valueOf(routeTimeClean);
-							
-							if (routeTimeInt > 20) {
-								sendNotification(routeTimeInt+" mins on "+routeName, "dummy");
-							}
-							
-						}
-						
-					} catch (JSONException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-					
-				}
-				
-				@Override
-				public void failure(Object data, String description) {
-					ClientLog.e(LOG_TAG, "got failure from heroku");
-					
-				}
-			};
-			
-			GenericHttpRequestTask trafficAlertTask = new GenericHttpRequestTask(caller);
-			
-			ClientLog.d(LOG_TAG, "going to call heroku now");
-			trafficAlertTask.execute("http://calm-fortress-7680.herokuapp.com/traffic");
-			
-			
+				runWazeRequest(fromLat, fromLon, toLat, toLon, context, gcmType);
+			}
 		}
-        
     }
-
-    // Put the GCM message into a notification and post it.
-    private void sendNotification(String msg, String payload) {
-        mNotificationManager = (NotificationManager)
-                ctx.getSystemService(Context.NOTIFICATION_SERVICE);
-        
-        Intent trafficIntent = new Intent(ctx, RadarActivity.class);
-        trafficIntent.putExtra(TRAFFIC_REPORT, payload);
-
-        PendingIntent contentIntent = PendingIntent.getActivity(ctx, 0,
-        		trafficIntent, 0);
-
-        Notification.Builder mBuilder =
-                new Notification.Builder(ctx)
-        .setSmallIcon(R.drawable.ic_launcher)
-        .setContentTitle("Heavy Traffic for Noa")
-        .setStyle(new Notification.BigTextStyle()
-        .bigText(msg))
-        .setContentText(msg)
-        .setAutoCancel(true);
-
-        mBuilder.setContentIntent(contentIntent);
-        mNotificationManager.notify(NOTIFICATION_ID, mBuilder.build());
+    
+    public static void runWazeRequest(String fromLat, String fromLon, String toLat, String toLon, Context context, String gcmType) {
+    	
+    	ServiceCaller caller = new WazeParserServiceCaller(context, gcmType);
+		
+		GenericHttpRequestTask trafficAlertTask = new GenericHttpRequestTask(caller);
+    	
+    	String url = "https://www.waze.com/il-RoutingManager/routingRequest?from=x%3A"+fromLon+"+y%3A"+fromLat+
+				"&to=x%3A"+toLon+"+y%3A"+toLat+"&at=0&returnJSON=true&returnGeometries=true&" +
+				"returnInstructions=true&timeout=60000&nPaths=3";
+		
+		ClientLog.d(LOG_TAG, "going to waze with url: "+url);
+		trafficAlertTask.execute(url);
     }
-
 }
